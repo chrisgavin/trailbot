@@ -116,7 +116,6 @@ class Camera():
 			file_listing_response = requests.get(url)
 			file_listing_response.raise_for_status()
 			file_listing = bs4.BeautifulSoup(file_listing_response.text, "html5lib")
-			print(file_listing.prettify())
 			file_table = file_listing.body.table
 			for file_row in file_table.find_all("tr"):
 				columns = file_row.find_all("td")
