@@ -1,0 +1,24 @@
+name: "Checks"
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  checks:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Install Native Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes libdbus-glib-1-dev libgirepository1.0-dev
+      - name: Setup Python
+        uses: chrisgavin/setup-python-action@e2a796e6217259831eedb2042df3324668078152
+      - name: Run
+        run: task ci
