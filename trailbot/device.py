@@ -1,3 +1,4 @@
+import contextlib
 import enum
 import logging
 import pathlib
@@ -165,3 +166,19 @@ class Camera():
 		device = _GATTDeviceBase(value_to_write=_DISABLE_WIFI_COMMAND, mac_address=self.bluetooth_mac, manager=self.device_manager)
 		device.connect()
 		self.device_manager.run()
+
+	@contextlib.contextmanager
+	def enabled_wifi(self) -> typing.Generator[None, None, None]:
+		try:
+			self.enable_wifi()
+			yield
+		finally:
+			self.disable_wifi()
+
+	@contextlib.contextmanager
+	def connected_to_wifi(self) -> typing.Generator[None, None, None]:
+		try:
+			self.connect_to_wifi()
+			yield
+		finally:
+			self.disconnect_from_wifi()
