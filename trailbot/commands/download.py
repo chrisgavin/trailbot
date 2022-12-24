@@ -19,9 +19,6 @@ _LOGGER = logging.getLogger(__name__)
 @click.option("--clean", is_flag=True, help="Delete files from camera after they're downloaded.")
 def download(bluetooth_mac:str, wifi_ssid:str, bluetooth_interface:typing.Optional[str], wifi_interface:typing.Optional[str], file_type:typing.List[trailbot.device.FileType], destination:pathlib.Path, clean:bool) -> None:
 	camera = trailbot.device.Camera(bluetooth_mac=bluetooth_mac, wifi_ssid=wifi_ssid, bluetooth_interface=bluetooth_interface, wifi_interface=wifi_interface)
-	camera.enable_wifi()
-	camera.connect_to_wifi()
-	camera.fetch_files(file_types=file_type, destination=destination, clean=clean)
-	camera.disconnect_from_wifi()
-	camera.disable_wifi()
+	with camera.enabled_wifi(), camera.connected_to_wifi():
+		camera.fetch_files(file_types=file_type, destination=destination, clean=clean)
 	_LOGGER.info("Done.")
