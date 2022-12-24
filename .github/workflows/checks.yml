@@ -19,6 +19,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes libdbus-glib-1-dev libgirepository1.0-dev
       - name: Setup Python
-        uses: chrisgavin/setup-python-action@e2a796e6217259831eedb2042df3324668078152
+        uses: chrisgavin/setup-python-action@492356cf53b35b71935f2521da0e57af63829c95
       - name: Run
         run: task ci
