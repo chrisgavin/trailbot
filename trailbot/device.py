@@ -101,7 +101,7 @@ class Camera():
 		)
 		while True:
 			_LOGGER.info("Waiting for connection to complete...")
-			wifi_interface = NetworkManager.NetworkManager.GetDeviceByIpIface("wlp82s0")
+			wifi_interface = NetworkManager.NetworkManager.GetDeviceByIpIface(self.wifi_interface)
 			if wifi_interface.State ==  NetworkManager.NM_DEVICE_STATE_ACTIVATED:
 				_LOGGER.info("Connected.")
 				break
