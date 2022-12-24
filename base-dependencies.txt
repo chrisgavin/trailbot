@@ -1,0 +1,2 @@
+poetry>=0.12
+poetry-dynamic-versioning
