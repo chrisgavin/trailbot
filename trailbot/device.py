@@ -108,7 +108,7 @@ class Camera():
 			else:
 				time.sleep(1)
 
-	def fetch_files(self, file_types:typing.Collection[FileType], destination:pathlib.Path) -> None:
+	def fetch_files(self, file_types:typing.Collection[FileType], destination:pathlib.Path, clean:bool) -> None:
 		if not file_types:
 			file_types = set(FileType)
 		for file_type in file_types:
@@ -146,6 +146,11 @@ class Camera():
 						raise Exception(f"Expected {temporary_full_destination} to be {size}, but it was only {actual_size}.")
 					temporary_full_destination.rename(full_destination)
 					_LOGGER.info("Downloaded %s.", full_destination)
+					if clean:
+						_LOGGER.info("Cleaning up %s...", download_url)
+						delete_response = requests.get(f"{download_url}?del=1")
+						delete_response.raise_for_status()
+						_LOGGER.info("Cleaned up %s.", download_url)
 				finally:
 					if temporary_full_destination.exists():
 						temporary_full_destination.unlink()
