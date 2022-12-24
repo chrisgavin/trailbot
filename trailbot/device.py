@@ -108,6 +108,12 @@ class Camera():
 			else:
 				time.sleep(1)
 
+	def disconnect_from_wifi(self) -> None:
+		for connection in NetworkManager.Settings.ListConnections():
+			if connection.GetSettings()["connection"]["id"] == self.wifi_ssid:
+				_LOGGER.info("Deleting connection to %s...", self.wifi_ssid)
+				connection.Delete()
+
 	def fetch_files(self, file_types:typing.Collection[FileType], destination:pathlib.Path, clean:bool) -> None:
 		if not file_types:
 			file_types = set(FileType)
