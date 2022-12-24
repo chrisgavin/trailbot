@@ -103,9 +103,12 @@ class Camera():
 		while True:
 			_LOGGER.info("Waiting for connection to complete...")
 			wifi_interface = NetworkManager.NetworkManager.GetDeviceByIpIface(self.wifi_interface)
-			if wifi_interface.State ==  NetworkManager.NM_DEVICE_STATE_ACTIVATED:
-				_LOGGER.info("Connected.")
-				break
+			if wifi_interface.State == NetworkManager.NM_DEVICE_STATE_ACTIVATED:
+				if wifi_interface.ActiveConnection.Id == self.wifi_ssid:
+					_LOGGER.info("Connected.")
+					break
+				else:
+					raise Exception(f"Did not connect to Wi-Fi network. Instead reverted back to {wifi_interface.ActiveConnection.Id}.")
 			else:
 				time.sleep(1)
 
