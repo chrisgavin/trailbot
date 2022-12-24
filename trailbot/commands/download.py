@@ -22,5 +22,6 @@ def download(bluetooth_mac:str, wifi_ssid:str, bluetooth_interface:typing.Option
 	camera.enable_wifi()
 	camera.connect_to_wifi()
 	camera.fetch_files(file_types=file_type, destination=destination, clean=clean)
+	camera.disconnect_from_wifi()
 	camera.disable_wifi()
 	_LOGGER.info("Done.")
