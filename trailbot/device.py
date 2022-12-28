@@ -3,6 +3,7 @@ import datetime
 import enum
 import logging
 import pathlib
+import threading
 import time
 import typing
 
@@ -29,35 +30,90 @@ _FILE_TYPE_URL_MAPPING = {
 	FileType.VIDEO: "MOVIE",
 }
 
-class _GATTDeviceBase(gatt.Device): # type: ignore
-	def __init__(self, value_to_write:bytes, *args:typing.Any, **kwargs:typing.Any) -> None:
+class _PhaseSet():
+	def __init__(self) -> None:
+		self.lock = threading.Lock()
+		self.phases:typing.Dict[str, typing.Optional[str]] = {}
+
+	def complete(self, phase_name:str, error:typing.Optional[str]) -> None:
+		with self.lock:
+			self.phases[phase_name] = error
+
+	def wait(self, phase_name:str, timeout:int=30) -> None:
+		start_time = time.time()
+		while True:
+			with self.lock:
+				if phase_name in self.phases:
+					error = self.phases[phase_name]
+					if error is not None:
+						raise RuntimeError(f"Phase {phase_name} failed with error {error}.")
+					return
+			if time.time() - start_time > timeout:
+				raise RuntimeError(f"Phase {phase_name} timed out.")
+			time.sleep(0.1)
+
+class _GATTDeviceManagerBase(gatt.DeviceManager): # type: ignore
+	def __init__(self, phase_set:_PhaseSet, mac_address:str, *args:typing.Any, **kwargs:typing.Any) -> None:
 		super().__init__(*args, **kwargs)
-		self.value_to_write = value_to_write
+		self.phase_set = phase_set
+		self.mac_address = mac_address
+
+	def device_discovered(self, device:gatt.Device) -> None:
+		_LOGGER.info("Discovered device %s.", device.mac_address.upper())
+		if device.mac_address.upper() == self.mac_address.upper():
+			self.phase_set.complete("discover", None)
+
+class _GATTDeviceBase(gatt.Device): # type: ignore
+	def __init__(self, bluetooth_interface:typing.Optional[str], mac_address:str, *args:typing.Any, **kwargs:typing.Any) -> None:
+		self.phase_set = _PhaseSet()
+		manager = _GATTDeviceManagerBase(self.phase_set, mac_address, adapter_name=bluetooth_interface)
+		super().__init__(manager=manager, mac_address=mac_address, *args, **kwargs)
 
 	def connect_succeeded(self) -> None:
 		super().connect_succeeded()
 		_LOGGER.info("Connected to %s.", self.mac_address)
+		self.phase_set.complete("connect", None)
 
 	def connect_failed(self, error:str) -> None:
 		super().connect_failed(error)
-		_LOGGER.error("Connection to %s failed with error %s.", self.mac_address, error)
+		self.phase_set.complete("connect", error)
 
 	def disconnect_succeeded(self) -> None:
 		super().disconnect_succeeded()
 		_LOGGER.info("Disconnected from %s.", self.mac_address)
-		self.manager.stop()
+		self.phase_set.complete("disconnect", None)
 
 	def services_resolved(self) -> None:
 		super().services_resolved()
 		_LOGGER.info("Services resolved on %s.", self.mac_address)
-
-		service = next(s for s in self.services if s.uuid == _SERVICE_UUID)
-		characteristic = next(c for c in service.characteristics if c.uuid == _CHARACTERISTIC_UUID)
-		characteristic.write_value(self.value_to_write)
+		self.phase_set.complete("resolve_services", None)
 
 	def characteristic_write_value_succeeded(self, characteristic:gatt.Characteristic) -> None:
 		_LOGGER.info("Write succeeded to %s on %s.", characteristic.uuid, self.mac_address)
-		self.disconnect()
+		self.phase_set.complete("write_value", None)
+
+	def characteristic_write_value_failed(self, _:gatt.Characteristic, error:str) -> None:
+		self.phase_set.complete("write_value", error)
+
+	def connect_and_write_value(self, value_to_write:bytes) -> None:
+		thread = threading.Thread(target=self.manager.run)
+		thread.start()
+		try:
+			self.manager.start_discovery()
+			self.phase_set.wait("discover")
+			self.manager.stop_discovery()
+			self.connect()
+			self.phase_set.wait("connect")
+			self.phase_set.wait("resolve_services")
+			service = next(s for s in self.services if s.uuid == _SERVICE_UUID)
+			characteristic = next(c for c in service.characteristics if c.uuid == _CHARACTERISTIC_UUID)
+			characteristic.write_value(value_to_write)
+			self.phase_set.wait("write_value")
+			self.disconnect()
+			self.phase_set.wait("disconnect")
+		finally:
+			self.manager.stop()
+			thread.join()
 
 class Camera():
 	def __init__(self, bluetooth_mac:str, wifi_ssid:str, bluetooth_interface:typing.Optional[str]=None, wifi_interface:typing.Optional[str]=None) -> None:
@@ -65,14 +121,11 @@ class Camera():
 		self.wifi_ssid = wifi_ssid
 		self.bluetooth_interface = bluetooth_interface
 		self.wifi_interface = wifi_interface or "wlan0"
-
-		self.device_manager = gatt.DeviceManager(adapter_name=self.bluetooth_interface)
 	
 	def enable_wifi(self) -> None:
 		_LOGGER.info("Enabling Wi-Fi...")
-		device = _GATTDeviceBase(value_to_write=_ENABLE_WIFI_COMMAND, mac_address=self.bluetooth_mac, manager=self.device_manager)
-		device.connect()
-		self.device_manager.run()
+		device = _GATTDeviceBase(mac_address=self.bluetooth_mac, bluetooth_interface=self.bluetooth_interface)
+		device.connect_and_write_value(_ENABLE_WIFI_COMMAND)
 
 	def connect_to_wifi(self) -> None:
 		_LOGGER.info("Connecting to Wi-Fi...")
@@ -175,9 +228,8 @@ class Camera():
 
 	def disable_wifi(self) -> None:
 		_LOGGER.info("Disabling Wi-Fi...")
-		device = _GATTDeviceBase(value_to_write=_DISABLE_WIFI_COMMAND, mac_address=self.bluetooth_mac, manager=self.device_manager)
-		device.connect()
-		self.device_manager.run()
+		device = _GATTDeviceBase(mac_address=self.bluetooth_mac, bluetooth_interface=self.bluetooth_interface)
+		device.connect_and_write_value(_DISABLE_WIFI_COMMAND)
 
 	@contextlib.contextmanager
 	def enabled_wifi(self) -> typing.Generator[None, None, None]:
