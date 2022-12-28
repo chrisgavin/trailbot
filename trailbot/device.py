@@ -1,4 +1,5 @@
 import contextlib
+import datetime
 import enum
 import logging
 import pathlib
@@ -163,6 +164,14 @@ class Camera():
 				finally:
 					if temporary_full_destination.exists():
 						temporary_full_destination.unlink()
+
+	def set_date_time(self) -> None:
+		date_time = datetime.datetime.now()
+		date_string = date_time.strftime("%Y-%m-%d")
+		time_string = date_time.strftime("%H:%M:%S")
+		_LOGGER.info(f"Setting date and time to {date_string} {time_string}...")
+		requests.get(f"{_API_URL}", params={"custom": "1", "cmd": "3005", "str": date_string}).raise_for_status()
+		requests.get(f"{_API_URL}", params={"custom": "1", "cmd": "3006", "str": time_string}).raise_for_status()
 
 	def disable_wifi(self) -> None:
 		_LOGGER.info("Disabling Wi-Fi...")
