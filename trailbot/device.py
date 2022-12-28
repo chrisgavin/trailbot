@@ -157,7 +157,7 @@ class Camera():
 					_LOGGER.info("Downloaded %s.", full_destination)
 					if clean:
 						_LOGGER.info("Cleaning up %s...", download_url)
-						delete_response = requests.get(f"{download_url}?del=1")
+						delete_response = requests.get(download_url, params={"del": "1"})
 						delete_response.raise_for_status()
 						_LOGGER.info("Cleaned up %s.", download_url)
 				finally:
