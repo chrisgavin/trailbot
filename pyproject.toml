@@ -26,11 +26,6 @@ mypy = { version="*" }
 pytest = { version="*" }
 pytest-github-actions-annotate-failures = { version = "*", optional = true }
 
-[tool.poetry.extras]
-github_actions = [
-	"pytest-github-actions-annotate-failures",
-]
-
 [tool.poetry.scripts]
 trailbot = "trailbot.__main__:main"
 
