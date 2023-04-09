@@ -200,10 +200,13 @@ class Camera():
 				file_response.raise_for_status()
 				size = int(file_response.headers["Content-Length"])
 				try:
+					last_progress = 0.0
 					with temporary_full_destination.open("wb") as file:
 						for chunk in file_response.iter_content(chunk_size=1024):
 							file.write(chunk)
-							_LOGGER.info("Downloaded %s of %s.", file.tell(), size)
+							if time.time() > last_progress + 1:
+								last_progress = time.time()
+								_LOGGER.info("Downloaded %s of %s.", file.tell(), size)
 					actual_size = temporary_full_destination.stat().st_size
 					if actual_size != size:
 						raise Exception(f"Expected {temporary_full_destination} to be {size}, but it was only {actual_size}.")
