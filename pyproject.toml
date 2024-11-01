@@ -30,7 +30,7 @@ pytest-github-actions-annotate-failures = { version = "*", optional = true }
 trailbot = "trailbot.__main__:main"
 
 [tool.poetry.group.dev.dependencies]
-types-requests = "^2.32.0.20240914"
+types-requests = "^2.32.0.20241016"
 
 [build-system]
 requires = [
