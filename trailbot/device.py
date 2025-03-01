@@ -180,13 +180,22 @@ class Camera():
 			file_listing_response = requests.get(url)
 			file_listing_response.raise_for_status()
 			file_listing = bs4.BeautifulSoup(file_listing_response.text, "html5lib")
+			assert file_listing.body is not None
 			file_table = file_listing.body.table
+			assert file_table is not None
 			for file_row in file_table.find_all("tr"):
+				assert isinstance(file_row, bs4.Tag)
 				columns = file_row.find_all("td")
 				if len(columns) <= 1:
 					continue
-				path = columns[0].a["href"]
-				date = columns[2].text.strip().replace("/", "-")
+				path_column = columns[0]
+				assert isinstance(path_column, bs4.Tag)
+				assert path_column.a is not None
+				path = path_column.a["href"]
+				assert isinstance(path, str)
+				date = columns[2].text
+				assert isinstance(date, str)
+				date = date.strip().replace("/", "-")
 				file_name = path.split("/")[-1]
 				destination_name = f"{date} - {file_name}"
 				full_destination = destination / destination_name
