@@ -16,7 +16,7 @@ gatt = "^0.2.7"
 dbus-python = "^1.4.0"
 pygobject = "^3.48.2"
 python-networkmanager = "^2.2"
-requests = "^2.32.3"
+requests = "^2.32.4"
 beautifulsoup4 = "^4.13.4"
 html5lib = "^1.1"
 
